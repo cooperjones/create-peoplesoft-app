@@ -113,7 +113,10 @@ const copyFiles = () =>
 
 const copyJson = hasHttpAuth => {
   const newJson = {
-    ...packageJson,
+    name: "my-peoplesoft-app",
+    version: "0.1.0",
+    description: "app bootstrapped with Create PeopleSoft App",
+    main: "index.js",
     scripts: {
       deploy: `send-to-peoplesoft -d .${hasHttpAuth ? " --with-auth" : ""}`
     },
