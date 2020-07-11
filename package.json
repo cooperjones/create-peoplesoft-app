@@ -1,14 +1,16 @@
 {
   "name": "create-peoplesoft-app",
-  "version": "0.1.5",
+  "version": "1.0.0",
   "description": "Create PeopleSoft App boilerplate repository",
   "main": "index.js",
   "author": "Martín Ciparelli <mciparelli@gmail.com>",
   "LICENSE": "UNLICENSED",
   "dependencies": {
+    "@highpoint/get-ps-token": "^0.1.2",
     "@highpoint/send-to-peoplesoft": "^0.5.0",
     "chalk": "^4.1.0",
-    "inquirer": "^7.3.1"
+    "inquirer": "^7.3.1",
+    "request-promise": "^4.2.5"
   },
   "bin": "./createPsApp.js"
 }
