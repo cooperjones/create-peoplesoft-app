@@ -173,7 +173,10 @@ getEnvVars().then(async ({ has_http_auth: hasHttpAuth, ...envVars }) => {
       pass: envVars.HTTP_PASSWORD
     };
 
-    const appName = directory.replace(/\s+/g, "-").toUpperCase();
+    const appName = directory
+      .replace(/\s+/g, "_")
+      .replace(/\-/g, "_")
+      .toUpperCase();
     const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${appName}`;
 
     const options = {
