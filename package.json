@@ -1,6 +1,6 @@
 {
   "name": "create-peoplesoft-app",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Create PeopleSoft App boilerplate repository",
   "main": "index.js",
   "author": "Martín Ciparelli <mciparelli@gmail.com>",

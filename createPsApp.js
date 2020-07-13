@@ -78,14 +78,38 @@ const createDir = async directory => {
 const getEnvVars = () =>
   inquirer.prompt([
     {
-      name: "unparsedAppName",
+      name: "directory",
       message: "Choose a name for your app:",
       validate: str => {
         const emptyValidation = validateNotEmpty(str);
         if (emptyValidation !== true) return emptyValidation;
-        const hasNoNumbers = !/\d/.test(str);
-        if (hasNoNumbers) return true;
-        return "App name cannot contain numbers";
+        const hasNumbers = /\d/.test(str);
+        if (hasNumbers) return "App name cannot contain numbers";
+        if (str.length > 30)
+          return "App name cannot be longer than 15 characters";
+        return true;
+      }
+    },
+    {
+      name: "unparsedWeblibName",
+      message: "Choose a name for the PeopleSoft weblib:",
+      default: ({ directory }) => {
+        return `WEBLIB_${directory
+          .replace(/\s+/g, "_")
+          .replace(/\-/g, "_")
+          .toUpperCase()
+          .slice(0, 8)}`;
+      },
+      validate: str => {
+        const emptyValidation = validateNotEmpty(str);
+        if (emptyValidation !== true) return emptyValidation;
+        const hasNumbers = /\d/.test(str);
+        if (hasNumbers) return "Weblib name cannot contain numbers";
+        if (str.length > 15)
+          return "Weblib name cannot be longer than 15 characters";
+        if (str.toUpperCase().indexOf("WEBLIB_") !== 0)
+          return `Weblib name must start with ${chalk.cyan("WEBLIB_")}`;
+        return true;
       }
     },
     {
@@ -133,10 +157,10 @@ const getEnvVars = () =>
     }
   ]);
 
-const copyFiles = directory => {
+const copyFiles = ({ directory, appJsName }) => {
   const filesToCopy = [
     { from: "README.md", to: "README.md" },
-    { from: "index.js", to: `${directory}.js` }
+    { from: "index.js", to: `${appJsName}.js` }
   ];
   return Promise.all(
     filesToCopy.map(({ from, to }) =>
@@ -178,13 +202,24 @@ const copyJson = async ({ directory, hasHttpAuth }) => {
 };
 
 getEnvVars().then(
-  async ({ has_http_auth: hasHttpAuth, unparsedAppName, ...envVars }) => {
-    const directory = unparsedAppName.replace(/\s+/g, "_").toLowerCase();
-    const psAppName = directory.toUpperCase();
+  async ({
+    has_http_auth: hasHttpAuth,
+    unparsedWeblibName,
+    directory,
+    ...envVars
+  }) => {
+    const weblibName = unparsedWeblibName
+      .replace(/\s+/g, "_")
+      .replace(/\-/g, "_")
+      .toUpperCase();
+    const appName = directory.replace(/\s+/g, "_").replace(/\-/g, "_");
+    const psAppName = appName.toUpperCase();
+    const appJsName = appName;
+    const psAppJsName = `${psAppName}_JS`;
     try {
       const isNewDir = await createDir(directory);
       if (isNewDir) {
-        await copyFiles(directory);
+        await copyFiles({ directory, appJsName });
       }
       await copyJson({ directory, hasHttpAuth });
       if (isNewDir) {
@@ -202,7 +237,7 @@ getEnvVars().then(
         pass: envVars.HTTP_PASSWORD
       };
 
-      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${psAppName}`;
+      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${psAppName}&weblibName=${weblibName}&appJsName=${psAppJsName}`;
 
       const options = {
         method: "POST",
