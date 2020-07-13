@@ -199,7 +199,10 @@ getEnvVars().then(
     const weblibName = encodeURIComponent(unparsedWeblibName.toUpperCase());
     const appName = encodeURIComponent(directory);
     const psAppName = appName;
-    const appJsName = appName.replace(/\s/g, "_").replace(/[^a-z_]/gi, "");
+    const appJsName = appName
+      .replace(/\s/g, "_")
+      .replace(/[^a-z_]/gi, "")
+      .toLowerCase();
     const psAppJsName = `${appJsName}_js`.toUpperCase();
     try {
       const isNewDir = await createDir(directory);
