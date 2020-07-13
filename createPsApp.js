@@ -53,7 +53,10 @@ const mkdir = util.promisify(fs.mkdir);
 
 const args = process.argv.slice(2);
 
-const validate = str => str.length > 0;
+const validateNotEmpty = str => {
+  if (str.length > 0) return true;
+  return "Should not be empty";
+};
 
 const serializeEnv = parsed =>
   Object.keys(parsed)
@@ -77,33 +80,37 @@ const getEnvVars = () =>
       name: "unparsedAppName",
       message: "Choose a name for your app:",
       validate: str => {
-        return validate(str) && !/\d/.test(str);
+        const emptyValidation = validateNotEmpty(str);
+        if (emptyValidation !== true) return emptyValidation;
+        const hasNoNumbers = !/\d/.test(str);
+        if (hasNoNumbers) return true;
+        return "App name cannot contain numbers";
       }
     },
     {
       name: "PS_HOSTNAME",
       message: "What's the PeopleSoft hostname (Ex: dev-ps.example.com)?",
-      validate
+      validate: validateNotEmpty
     },
     {
       name: "PS_ENVIRONMENT",
       message: "What's the PeopleSoft site name (Ex: csdev, csprd)?",
-      validate
+      validate: validateNotEmpty
     },
     {
       name: "PS_NODE",
       message: "What's the PeopleSoft node (Ex: SA, HRMS)?",
-      validate
+      validate: validateNotEmpty
     },
     {
       name: "PS_USERNAME",
       message: "What's your PeopleSoft OPRID (Ex: PS)?",
-      validate
+      validate: validateNotEmpty
     },
     {
       name: "PS_PASSWORD",
       message: "What's your PeopleSoft OPRID password (Ex: PS)?",
-      validate
+      validate: validateNotEmpty
     },
     {
       name: "has_http_auth",
@@ -114,12 +121,14 @@ const getEnvVars = () =>
     {
       name: "HTTP_USERNAME",
       message: "What's your HTTP username?",
-      when: ({ has_http_auth: hasHttpAuth }) => hasHttpAuth
+      when: ({ has_http_auth: hasHttpAuth }) => hasHttpAuth,
+      validate: validateNotEmpty
     },
     {
       name: "HTTP_PASSWORD",
       message: "What's your HTTP password?",
-      when: ({ has_http_auth: hasHttpAuth }) => hasHttpAuth
+      when: ({ has_http_auth: hasHttpAuth }) => hasHttpAuth,
+      validate: validateNotEmpty
     }
   ]);
 
