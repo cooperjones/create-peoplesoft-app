@@ -83,8 +83,6 @@ const getEnvVars = () =>
       validate: str => {
         const emptyValidation = validateNotEmpty(str);
         if (emptyValidation !== true) return emptyValidation;
-        const hasNumbers = /\d/.test(str);
-        if (hasNumbers) return "App name cannot contain numbers";
         if (str.length > 30)
           return "App name cannot be longer than 15 characters";
         return true;
@@ -103,8 +101,6 @@ const getEnvVars = () =>
       validate: str => {
         const emptyValidation = validateNotEmpty(str);
         if (emptyValidation !== true) return emptyValidation;
-        const hasNumbers = /\d/.test(str);
-        if (hasNumbers) return "Weblib name cannot contain numbers";
         if (str.length > 15)
           return "Weblib name cannot be longer than 15 characters";
         if (str.toUpperCase().indexOf("WEBLIB_") !== 0)
