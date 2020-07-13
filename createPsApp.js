@@ -9,6 +9,7 @@ const util = require("util");
 const Request = require("request-promise");
 const getToken = require("@highpoint/get-ps-token");
 const packageJson = require("./package.json");
+const openBrowser = require("react-dev-utils/openBrowser");
 
 const currentNodeVersion = process.versions.node;
 const semver = currentNodeVersion.split(".");
@@ -225,6 +226,7 @@ getEnvVars().then(
       const cwd = path.resolve(directory);
       await exec("yarn", [], { cwd });
       await exec("yarn", ["deploy"], { cwd });
+      openBrowser(appUrl);
 
       console.log(`\n${chalk.green("That's it!\n")}`);
 
