@@ -3,6 +3,8 @@
 const inquirer = require("inquirer");
 const chalk = require("chalk");
 const fs = require("fs");
+const path = require("path");
+const { spawn } = require("child_process");
 const util = require("util");
 const Request = require("request-promise");
 const getToken = require("@highpoint/get-ps-token");
@@ -22,6 +24,22 @@ if (major < 10) {
   );
   process.exit(1);
 }
+
+const exec = (command, args, { stdio = "inherit", ...options } = {}) => {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio, ...options });
+
+    child.on("close", code => {
+      if (code !== 0) {
+        reject({
+          command: `${command} ${args.join(" ")}`
+        });
+        return;
+      }
+      resolve();
+    });
+  });
+};
 
 const readFile = util.promisify(fs.readFile);
 
@@ -195,12 +213,16 @@ getEnvVars().then(
         if (!response.body.includes("already exists")) throw err; // if app exists we'll use it
       }
 
+      const cwd = path.resolve(directory);
+      await exec("yarn", [], { cwd });
+      await exec("yarn", ["deploy"], { cwd });
+
       console.log(`\n${chalk.green("That's it!\n")}`);
 
       console.log(
         `Now ${chalk.grey("cd")} to ${chalk.green(
           directory
-        )} and run ${chalk.grey("yarn")} and ${chalk.grey(
+        )} and run ${chalk.grey(
           "yarn deploy"
         )} to send your JS and CSS assets to your PeopleSoft server.\n`
       );
