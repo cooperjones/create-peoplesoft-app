@@ -105,13 +105,17 @@ const getEnvVars = () =>
     }
   ]);
 
-const filesToCopy = ["README.md", "index.js"];
-const copyFiles = directory =>
-  Promise.all(
-    filesToCopy.map(file =>
-      copyFile(`${__dirname}/${file}`, `${directory}/${file}`)
+const copyFiles = directory => {
+  const filesToCopy = [
+    { from: "README.md", to: "README.md" },
+    { from: "index.js", to: `${directory}.js` }
+  ];
+  return Promise.all(
+    filesToCopy.map(({ from, to }) =>
+      copyFile(`${__dirname}/${from}`, `${directory}/${to}`)
     )
   );
+};
 
 const copyJson = async ({ directory, hasHttpAuth }) => {
   const destination = `${directory}/package.json`;
@@ -130,7 +134,7 @@ const copyJson = async ({ directory, hasHttpAuth }) => {
     name: "my-peoplesoft-app",
     version: "0.1.0",
     description: "app bootstrapped with Create PeopleSoft App",
-    main: "index.js",
+    main: `${directory}.js`,
     ...existingContents,
     scripts: {
       ...existingContents.scripts,
@@ -147,8 +151,8 @@ const copyJson = async ({ directory, hasHttpAuth }) => {
 
 getEnvVars().then(
   async ({ has_http_auth: hasHttpAuth, unparsedAppName, ...envVars }) => {
-    const directory = unparsedAppName.replace(/\s+/g, "-").toLowerCase();
-    const appName = directory.replace(/\-/g, "_").toUpperCase();
+    const directory = unparsedAppName.replace(/\s+/g, "_").toLowerCase();
+    const psAppName = directory.toUpperCase();
     try {
       const isNewDir = await createDir(directory);
       if (isNewDir) {
@@ -170,7 +174,7 @@ getEnvVars().then(
         pass: envVars.HTTP_PASSWORD
       };
 
-      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${appName}`;
+      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${psAppName}`;
 
       const options = {
         method: "POST",
@@ -181,8 +185,8 @@ getEnvVars().then(
       const response = await request(options);
       if (response.statusCode !== 200)
         throw new Error("Failed to create PeopleSoft app.");
-      let appUrl = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_${appName}.ISCRIPT1.FieldFormula.IScript_Main`;
-      let localDevHeaderName = `X-${appName}-Asset-Url`;
+      let appUrl = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_${psAppName}.ISCRIPT1.FieldFormula.IScript_Main`;
+      let localDevHeaderName = `X-${psAppName}-Asset-Url`;
       try {
         const jsonResponse = JSON.parse(response.body);
         appUrl = jsonResponse.appUrl;
