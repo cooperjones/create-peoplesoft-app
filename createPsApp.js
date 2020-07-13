@@ -84,7 +84,9 @@ const getEnvVars = () =>
         const emptyValidation = validateNotEmpty(str);
         if (emptyValidation !== true) return emptyValidation;
         if (str.length > 30)
-          return "App name cannot be longer than 15 characters";
+          return "App name cannot be longer than 30 characters.";
+        if (!/^[a-z0-9_-\s]+$/i.test(str))
+          return "App name must be alphanumeric and can contain underscores, hyphens and spaces.";
         return true;
       }
     },
@@ -93,8 +95,8 @@ const getEnvVars = () =>
       message: "Choose a name for the PeopleSoft weblib:",
       default: ({ directory }) => {
         return `WEBLIB_${directory
-          .replace(/\s+/g, "_")
-          .replace(/\-/g, "_")
+          .replace(/\s/g, "_")
+          .replace(/[^a-z0-9_]/gi, "")
           .toUpperCase()
           .slice(0, 8)}`;
       },
@@ -102,9 +104,11 @@ const getEnvVars = () =>
         const emptyValidation = validateNotEmpty(str);
         if (emptyValidation !== true) return emptyValidation;
         if (str.length > 15)
-          return "Weblib name cannot be longer than 15 characters";
+          return "Weblib name cannot be longer than 15 characters.";
         if (str.toUpperCase().indexOf("WEBLIB_") !== 0)
-          return `Weblib name must start with ${chalk.cyan("WEBLIB_")}`;
+          return `Weblib name must start with ${chalk.cyan("WEBLIB_")}.`;
+        if (!/^[a-z0-9_]+$/i.test(str))
+          return "Weblib must be alphanumeric and can contain underscores.";
         return true;
       }
     },
@@ -153,18 +157,6 @@ const getEnvVars = () =>
     }
   ]);
 
-const copyFiles = ({ directory, appJsName }) => {
-  const filesToCopy = [
-    { from: "README.md", to: "README.md" },
-    { from: "index.js", to: `${appJsName}.js` }
-  ];
-  return Promise.all(
-    filesToCopy.map(({ from, to }) =>
-      copyFile(`${__dirname}/${from}`, `${directory}/${to}`)
-    )
-  );
-};
-
 const copyJson = async ({ directory, hasHttpAuth }) => {
   const destination = `${directory}/package.json`;
   let existingContents = {
@@ -204,18 +196,19 @@ getEnvVars().then(
     directory,
     ...envVars
   }) => {
-    const weblibName = unparsedWeblibName
-      .replace(/\s+/g, "_")
-      .replace(/\-/g, "_")
-      .toUpperCase();
-    const appName = directory.replace(/\s+/g, "_").replace(/\-/g, "_");
-    const psAppName = appName.toUpperCase();
-    const appJsName = appName;
-    const psAppJsName = `${psAppName}_JS`;
+    const weblibName = encodeURIComponent(unparsedWeblibName.toUpperCase());
+    const appName = encodeURIComponent(directory);
+    const psAppName = appName;
+    const appJsName = appName.replace(/\s/g, "_").replace(/[^a-z_]/gi, "");
+    const psAppJsName = `${appJsName}_js`.toUpperCase();
     try {
       const isNewDir = await createDir(directory);
       if (isNewDir) {
-        await copyFiles({ directory, appJsName });
+        await copyFile(`${__dirname}/README.md`, `${directory}/README.md`);
+        await writeFile(
+          `${directory}/${appJsName}.js`,
+          `document.write('Hey! This is the first deploy for "${directory}". Update your "${appJsName}.js" file, run \\'yarn deploy\\' and reload to see the changes.')`
+        );
       }
       await copyJson({ directory, hasHttpAuth });
       if (isNewDir) {
@@ -244,7 +237,7 @@ getEnvVars().then(
       const response = await request(options);
       if (response.statusCode !== 200)
         throw new Error("Failed to create PeopleSoft app.");
-      let appUrl = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_${psAppName}.ISCRIPT1.FieldFormula.IScript_Main`;
+      let appUrl = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_${weblibName}.ISCRIPT1.FieldFormula.IScript_Main`;
       let localDevHeaderName = `X-${psAppName}-Asset-Url`;
       try {
         const jsonResponse = JSON.parse(response.body);
