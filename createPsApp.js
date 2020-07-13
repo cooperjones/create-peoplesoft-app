@@ -35,18 +35,6 @@ const mkdir = util.promisify(fs.mkdir);
 
 const args = process.argv.slice(2);
 
-const directory = args[0];
-
-if (!directory) {
-  console.error("Please specify the project directory:");
-  console.log(
-    `  ${chalk.cyan("create-peoplesoft-app")} ${chalk.green(
-      "<project-directory>"
-    )}`
-  );
-  process.exit(1);
-}
-
 const validate = str => str.length > 0;
 
 const serializeEnv = parsed =>
@@ -54,7 +42,7 @@ const serializeEnv = parsed =>
     .map(key => `${key.toUpperCase()}=${parsed[key]}`)
     .join("\n");
 
-const createDir = async () => {
+const createDir = async directory => {
   try {
     await mkdir(directory);
     return true;
@@ -67,6 +55,13 @@ const createDir = async () => {
 
 const getEnvVars = () =>
   inquirer.prompt([
+    {
+      name: "unparsedAppName",
+      message: "Choose a name for your app:",
+      validate: str => {
+        return validate(str) && !/\d/.test(str);
+      }
+    },
     {
       name: "PS_HOSTNAME",
       message: "What's the PeopleSoft hostname (Ex: dev-ps.example.com)?",
@@ -111,14 +106,14 @@ const getEnvVars = () =>
   ]);
 
 const filesToCopy = ["README.md", "index.js"];
-const copyFiles = () =>
+const copyFiles = directory =>
   Promise.all(
     filesToCopy.map(file =>
       copyFile(`${__dirname}/${file}`, `${directory}/${file}`)
     )
   );
 
-const copyJson = async hasHttpAuth => {
+const copyJson = async ({ directory, hasHttpAuth }) => {
   const destination = `${directory}/package.json`;
   let existingContents = {
     scripts: {},
@@ -150,77 +145,76 @@ const copyJson = async hasHttpAuth => {
   return writeFile(destination, JSON.stringify(newJson, null, 2));
 };
 
-getEnvVars().then(async ({ has_http_auth: hasHttpAuth, ...envVars }) => {
-  try {
-    const isNewDir = await createDir();
-    if (isNewDir) {
-      await copyFiles();
-    }
-    await copyJson(hasHttpAuth);
-    if (isNewDir) {
-      await writeFile(`${directory}/.gitignore`, "node_modules\n.env");
-    }
-    await writeFile(`${directory}/.env`, serializeEnv(envVars));
-    //cs92-devo-ps.mhighpoint.com/psc/csdev92o/EMPLOYEE/SA/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp
-
-    const request = Request.defaults({
-      headers: { "User-Agent": "request" },
-      jar: await getToken(envVars),
-      resolveWithFullResponse: true
-    });
-    const authOptions = {
-      user: envVars.HTTP_USERNAME,
-      pass: envVars.HTTP_PASSWORD
-    };
-
-    const appName = directory
-      .replace(/\s+/g, "_")
-      .replace(/\-/g, "_")
-      .toUpperCase();
-    const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${appName}`;
-
-    const options = {
-      method: "POST",
-      uri
-    };
-    if (hasHttpAuth) options.auth = authOptions;
-
-    const response = await request(options);
-    if (response.statusCode !== 200)
-      throw new Error("Failed to create PeopleSoft app.");
-    let appUrl = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_${appName}.ISCRIPT1.FieldFormula.IScript_Main`;
-    let localDevHeaderName = `X-${appName}-Asset-Url`;
+getEnvVars().then(
+  async ({ has_http_auth: hasHttpAuth, unparsedAppName, ...envVars }) => {
+    const directory = unparsedAppName.replace(/\s+/g, "-").toLowerCase();
+    const appName = directory.replace(/\-/g, "_").toUpperCase();
     try {
-      const jsonResponse = JSON.parse(response.body);
-      appUrl = jsonResponse.appUrl;
-      localDevHeaderName = jsonResponse.localDevHeaderName;
+      const isNewDir = await createDir(directory);
+      if (isNewDir) {
+        await copyFiles(directory);
+      }
+      await copyJson({ directory, hasHttpAuth });
+      if (isNewDir) {
+        await writeFile(`${directory}/.gitignore`, "node_modules\n.env");
+      }
+      await writeFile(`${directory}/.env`, serializeEnv(envVars));
+
+      const request = Request.defaults({
+        headers: { "User-Agent": "request" },
+        jar: await getToken(envVars),
+        resolveWithFullResponse: true
+      });
+      const authOptions = {
+        user: envVars.HTTP_USERNAME,
+        pass: envVars.HTTP_PASSWORD
+      };
+
+      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${appName}`;
+
+      const options = {
+        method: "POST",
+        uri
+      };
+      if (hasHttpAuth) options.auth = authOptions;
+
+      const response = await request(options);
+      if (response.statusCode !== 200)
+        throw new Error("Failed to create PeopleSoft app.");
+      let appUrl = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_${appName}.ISCRIPT1.FieldFormula.IScript_Main`;
+      let localDevHeaderName = `X-${appName}-Asset-Url`;
+      try {
+        const jsonResponse = JSON.parse(response.body);
+        appUrl = jsonResponse.appUrl;
+        localDevHeaderName = jsonResponse.localDevHeaderName;
+      } catch (err) {
+        if (!response.body.includes("already exists")) throw err; // if app exists we'll use it
+      }
+
+      console.log(`\n${chalk.green("That's it!\n")}`);
+
+      console.log(
+        `Now ${chalk.grey("cd")} to ${chalk.green(
+          directory
+        )} and run ${chalk.grey("yarn")} and ${chalk.grey(
+          "yarn deploy"
+        )} to send your JS and CSS assets to your PeopleSoft server.\n`
+      );
+      console.log(`Your app is now live at ${chalk.blue(appUrl)}.\n`);
+      console.log(
+        `You can use ${chalk.green(
+          localDevHeaderName
+        )} request header in your app to load assets from a custom URL instead of the PeopleSoft server.`
+      );
+      console.log(
+        `This is useful for development. Read more about it here: ${chalk.blue(
+          "https://cooperjones.github.io/hpt-docs/?path=/docs/welcome-installation--page"
+        )}`
+      );
     } catch (err) {
-      if (!response.body.includes("already exists")) throw err; // if app exists we'll use it
+      console.error("Something went wrong.");
+      console.error(err);
+      process.exit(1);
     }
-
-    console.log(`\n${chalk.green("That's it!\n")}`);
-
-    console.log(
-      `Now ${chalk.grey("cd")} to ${chalk.green(
-        directory
-      )} and run ${chalk.grey("yarn")} and ${chalk.grey(
-        "yarn deploy"
-      )} to send your JS and CSS assets to your PeopleSoft server.\n`
-    );
-    console.log(`Your app is now live at ${chalk.blue(appUrl)}.\n`);
-    console.log(
-      `You can use ${chalk.green(
-        localDevHeaderName
-      )} request header in your app to load assets from a custom URL instead of the PeopleSoft server.`
-    );
-    console.log(
-      `This is useful for development. Read more about it here: ${chalk.blue(
-        "https://cooperjones.github.io/hpt-docs/?path=/docs/welcome-installation--page"
-      )}`
-    );
-  } catch (err) {
-    console.error("Something went wrong.");
-    console.error(err);
-    process.exit(1);
   }
-});
+);
