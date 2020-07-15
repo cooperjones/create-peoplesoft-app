@@ -78,7 +78,7 @@ const getEnvVars = async () => {
   return inquirer.prompt([
     {
       name: "directory",
-      message: "Choose a name for your app:",
+      message: "Specify an ID for your app (Ex: Z_MY_APP):",
       validate: str => {
         const emptyValidation = validateNotEmpty(str);
         if (emptyValidation !== true) return emptyValidation;
@@ -91,7 +91,7 @@ const getEnvVars = async () => {
     },
     {
       name: "unparsedWeblibName",
-      message: "Choose a name for the PeopleSoft weblib:",
+      message: "Specify a WEBLIB record name to create (Ex: WEBLIB_Z_MY_APP):",
       default: ({ directory }) => {
         return `WEBLIB_${directory
           .replace(/\s/g, "_")
