@@ -177,11 +177,11 @@ getEnvVars().then(
     const weblibName = encodeURIComponent(unparsedWeblibName.toUpperCase());
     const appName = encodeURIComponent(directory);
     const psAppName = appName;
-    const appNameNoSpaces = directory
+    const appNameNoSpaces = `h_${directory
       .replace(/\s/g, "_")
       .replace(/[^a-z]/gi, "")
-      .toLowerCase();
-    const psAppHtmlName = `h_${appNameNoSpaces}`.toUpperCase();
+      .toLowerCase()}`;
+    const psAppHtmlName = appNameNoSpaces.toUpperCase();
     try {
       await mkdir(directory);
       await mkdir(`${directory}/src`);
