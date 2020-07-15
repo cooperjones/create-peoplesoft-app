@@ -10,6 +10,12 @@ const Request = require("request-promise");
 const getToken = require("@highpoint/get-ps-token");
 const packageJson = require("./package.json");
 const openBrowser = require("react-dev-utils/openBrowser");
+const generateGitIgnore = require("./config/generateGitIgnore");
+const generateHtml = require("./config/generateHtml");
+const generateJson = require("./config/generatePackageJson");
+const generateWebpackConfig = require("./config/generateWebpackConfig");
+
+const configHomeJsonPath = path.resolve(process.env.HOME, "cpsa.config.json");
 
 const currentNodeVersion = process.versions.node;
 const semver = currentNodeVersion.split(".");
@@ -20,7 +26,7 @@ if (major < 10) {
     "You are running Node " +
       currentNodeVersion +
       ".\n" +
-      "Create PeopleSoft App requires Node 12 or higher. \n" +
+      "Create PeopleSoft App requires Node 10 or higher. \n" +
       "Please update your version of Node."
   );
   process.exit(1);
@@ -64,19 +70,12 @@ const serializeEnv = parsed =>
     .map(key => `${key.toUpperCase()}=${parsed[key]}`)
     .join("\n");
 
-const createDir = async directory => {
+const getEnvVars = async () => {
+  let defaultEnvVars = {};
   try {
-    await mkdir(directory);
-    return true;
-  } catch (err) {
-    if (err.code === "EEXIST") return false; // keep doing tasks if directory exists
-    console.error(`Could not create ${chalk.green(directory)} directory.`);
-    process.exit(1);
-  }
-};
-
-const getEnvVars = () =>
-  inquirer.prompt([
+    defaultEnvVars = JSON.parse(await readFile(configHomeJsonPath));
+  } catch (_err) {}
+  return inquirer.prompt([
     {
       name: "directory",
       message: "Choose a name for your app:",
@@ -115,78 +114,56 @@ const getEnvVars = () =>
     {
       name: "PS_HOSTNAME",
       message: "What's the PeopleSoft hostname (Ex: dev-ps.example.com)?",
+      default: defaultEnvVars.PS_HOSTNAME,
       validate: validateNotEmpty
     },
     {
       name: "PS_ENVIRONMENT",
       message: "What's the PeopleSoft site name (Ex: csdev, csprd)?",
+      default: defaultEnvVars.PS_ENVIRONMENT,
       validate: validateNotEmpty
     },
     {
       name: "PS_NODE",
       message: "What's the PeopleSoft node (Ex: SA, HRMS)?",
+      default: defaultEnvVars.PS_NODE,
       validate: validateNotEmpty
     },
     {
       name: "PS_USERNAME",
       message: "What's your PeopleSoft OPRID (Ex: PS)?",
+      default: defaultEnvVars.PS_USERNAME,
       validate: validateNotEmpty
     },
     {
       name: "PS_PASSWORD",
       message: "What's your PeopleSoft OPRID password (Ex: PS)?",
+      default: defaultEnvVars.PS_PASSWORD,
       validate: validateNotEmpty
     },
     {
       name: "has_http_auth",
       message: "Is your server under HTTP authentication?",
       type: "confirm",
-      default: false
+      default: Boolean(
+        defaultEnvVars.HTTP_USERNAME && defaultEnvVars.HTTP_PASSWORD
+      )
     },
     {
       name: "HTTP_USERNAME",
       message: "What's your HTTP username?",
       when: ({ has_http_auth: hasHttpAuth }) => hasHttpAuth,
+      default: defaultEnvVars.HTTP_USERNAME,
       validate: validateNotEmpty
     },
     {
       name: "HTTP_PASSWORD",
       message: "What's your HTTP password?",
       when: ({ has_http_auth: hasHttpAuth }) => hasHttpAuth,
+      default: defaultEnvVars.HTTP_PASSWORD,
       validate: validateNotEmpty
     }
   ]);
-
-const copyJson = async ({ directory, hasHttpAuth }) => {
-  const destination = `${directory}/package.json`;
-  let existingContents = {
-    scripts: {},
-    devDependencies: {}
-  };
-  try {
-    existingContents = JSON.parse(await readFile(destination));
-  } catch (_err) {
-    // if it failed reading for whatever reason, assume it has no contents and override it.
-  }
-  const deploy = `send-to-peoplesoft -d .${hasHttpAuth ? " --with-auth" : ""}`;
-  const sendToPsDep = "@highpoint/send-to-peoplesoft";
-  const newJson = {
-    name: "my-peoplesoft-app",
-    version: "0.1.0",
-    description: "app bootstrapped with Create PeopleSoft App",
-    main: `${directory}.js`,
-    ...existingContents,
-    scripts: {
-      ...existingContents.scripts,
-      deploy
-    },
-    devDependencies: {
-      ...existingContents.devDependencies,
-      [sendToPsDep]: packageJson.dependencies[sendToPsDep]
-    }
-  };
-
-  return writeFile(destination, JSON.stringify(newJson, null, 2));
 };
 
 getEnvVars().then(
@@ -196,28 +173,63 @@ getEnvVars().then(
     directory,
     ...envVars
   }) => {
+    const buildFolder = "dist";
     const weblibName = encodeURIComponent(unparsedWeblibName.toUpperCase());
     const appName = encodeURIComponent(directory);
     const psAppName = appName;
-    const appJsName = appName
+    const appNameNoSpaces = directory
       .replace(/\s/g, "_")
-      .replace(/[^a-z_]/gi, "")
+      .replace(/[^a-z]/gi, "")
       .toLowerCase();
-    const psAppJsName = `${appJsName}_js`.toUpperCase();
+    const psAppHtmlName = `h_${appNameNoSpaces}`.toUpperCase();
     try {
-      const isNewDir = await createDir(directory);
-      if (isNewDir) {
-        await copyFile(`${__dirname}/README.md`, `${directory}/README.md`);
-        await writeFile(
-          `${directory}/${appJsName}.js`,
-          `document.write('Hey! This is the first deploy for "${directory}". Update your "${appJsName}.js" file, run \\'yarn deploy\\' and reload to see the changes.')`
-        );
-      }
-      await copyJson({ directory, hasHttpAuth });
-      if (isNewDir) {
-        await writeFile(`${directory}/.gitignore`, "node_modules\n.env");
-      }
+      await mkdir(directory);
+      await mkdir(`${directory}/src`);
+      await copyFile(`${__dirname}/config/README.md`, `${directory}/README.md`);
+      await copyFile(
+        `${__dirname}/config/index.js`,
+        `${directory}/src/index.js`
+      );
+      await copyFile(
+        `${__dirname}/config/styles.css`,
+        `${directory}/${appNameNoSpaces}.css`
+      );
+      await writeFile(
+        `${directory}/${appNameNoSpaces}.html`,
+        generateHtml(appNameNoSpaces)
+      );
+      await writeFile(
+        `${directory}/.gitignore`,
+        generateGitIgnore({ buildFolder })
+      );
+      await writeFile(
+        `${directory}/package.json`,
+        generateJson({ buildFolder, hasHttpAuth, appName: appNameNoSpaces })
+      );
+      await writeFile(
+        `${directory}/webpack.config.js`,
+        generateWebpackConfig({
+          buildFolder,
+          appName: appNameNoSpaces
+        })
+      );
       await writeFile(`${directory}/.env`, serializeEnv(envVars));
+      await writeFile(
+        configHomeJsonPath,
+        JSON.stringify(
+          {
+            PS_HOSTNAME: envVars.PS_HOSTNAME,
+            PS_ENVIRONMENT: envVars.PS_ENVIRONMENT,
+            PS_NODE: envVars.PS_NODE,
+            PS_USERNAME: envVars.PS_USERNAME,
+            PS_PASSWORD: envVars.PS_PASSWORD,
+            HTTP_USERNAME: envVars.HTTP_USERNAME,
+            HTTP_PASSWORD: envVars.HTTP_PASSWORD
+          },
+          null,
+          2
+        )
+      );
 
       const request = Request.defaults({
         headers: { "User-Agent": "request" },
@@ -229,7 +241,7 @@ getEnvVars().then(
         pass: envVars.HTTP_PASSWORD
       };
 
-      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${psAppName}&weblibName=${weblibName}&appJsName=${psAppJsName}`;
+      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${psAppName}&weblibName=${weblibName}&htmlObjectName=${psAppHtmlName}`;
 
       const options = {
         method: "POST",
@@ -240,8 +252,8 @@ getEnvVars().then(
       const response = await request(options);
       if (response.statusCode !== 200)
         throw new Error("Failed to create PeopleSoft app.");
-      let appUrl = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_${weblibName}.ISCRIPT1.FieldFormula.IScript_Main`;
-      let localDevHeaderName = `X-${psAppName}-Asset-Url`;
+      let appUrl = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/{weblibName}.ISCRIPT1.FieldFormula.IScript_Main`;
+      let localDevHeaderName = `X-${appNameNoSpaces}-Asset-Url`;
       try {
         const jsonResponse = JSON.parse(response.body);
         appUrl = jsonResponse.appUrl;
@@ -250,8 +262,19 @@ getEnvVars().then(
         if (!response.body.includes("already exists")) throw err; // if app exists we'll use it
       }
 
+      const devDependencies = [
+        "@highpoint/send-to-peoplesoft",
+        "webpack",
+        "webpack-cli",
+        "webpack-dev-server"
+      ];
+      const dependencies = ["react", "react-dom"];
+
       const cwd = path.resolve(directory);
       await exec("yarn", [], { cwd });
+      await exec("yarn", ["add", "--dev", ...devDependencies], { cwd });
+      await exec("yarn", ["add", ...dependencies], { cwd });
+      await exec("yarn", ["build"], { cwd });
       await exec("yarn", ["deploy"], { cwd });
       openBrowser(appUrl);
 
@@ -265,16 +288,6 @@ getEnvVars().then(
         )} to send your JS and CSS assets to your PeopleSoft server.\n`
       );
       console.log(`Your app is now live at ${chalk.blue(appUrl)}.\n`);
-      console.log(
-        `You can use ${chalk.green(
-          localDevHeaderName
-        )} request header in your app to load assets from a custom URL instead of the PeopleSoft server.`
-      );
-      console.log(
-        `This is useful for development. Read more about it here: ${chalk.blue(
-          "https://cooperjones.github.io/hpt-docs/?path=/docs/welcome-installation--page"
-        )}`
-      );
     } catch (err) {
       console.error("Something went wrong.");
       console.error(err);

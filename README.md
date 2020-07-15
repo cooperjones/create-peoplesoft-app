@@ -1,5 +1,3 @@
-# Create PeopleSoft App boilerplate
+# Create PeopleSoft App repository
 
-This project was created with create-peoplesoft-app.
-
-Run `yarn deploy` to send all your JS and CSS assets in this folder to your PeopleSoft server.
+This project creates PeopleSoft boilerplate apps.
