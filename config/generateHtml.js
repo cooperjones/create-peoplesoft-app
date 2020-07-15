@@ -6,7 +6,7 @@ module.exports = appName => `<html lang="en" dir="ltr">
   </head>
   <body>
     <div id="app"></div>
-    <script type="text/javascript" src="./${appName}_vendor.js"></script>
-    <script type="text/javascript" src="./${appName}_app.js"></script>
+    <script type="text/javascript" src="${appName}_vendor.js"></script>
+    <script type="text/javascript" src="${appName}_app.js"></script>
   </body>
 </html>`;
