@@ -139,6 +139,8 @@ const getEnvVars = async () => {
       name: "PS_PASSWORD",
       message: "What's your PeopleSoft OPRID password (Ex: PS)?",
       default: defaultEnvVars.PS_PASSWORD,
+      type: "password",
+      mask: "*",
       validate: validateNotEmpty
     },
     {
@@ -161,6 +163,8 @@ const getEnvVars = async () => {
       message: "What's your HTTP password?",
       when: ({ has_http_auth: hasHttpAuth }) => hasHttpAuth,
       default: defaultEnvVars.HTTP_PASSWORD,
+      type: "password",
+      mask: "*",
       validate: validateNotEmpty
     }
   ]);
