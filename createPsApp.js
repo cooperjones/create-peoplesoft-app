@@ -198,6 +198,7 @@ getEnvVars().then(
         `${__dirname}/config/styles.css`,
         `${directory}/${appNameNoSpaces}.css`
       );
+      await copyFile(`${__dirname}/config/.babelrc`, `${directory}/.babelrc`);
       await writeFile(
         `${directory}/${appNameNoSpaces}.html`,
         generateHtml(appNameNoSpaces)
@@ -270,7 +271,12 @@ getEnvVars().then(
         "@highpoint/send-to-peoplesoft",
         "webpack",
         "webpack-cli",
-        "webpack-dev-server"
+        "webpack-dev-server",
+        "@babel/core",
+        "@babel/cli",
+        "babel-loader",
+        "@babel/preset-env",
+        "@babel/preset-react"
       ];
       const dependencies = ["react", "react-dom"];
 
