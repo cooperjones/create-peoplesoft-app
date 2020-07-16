@@ -200,10 +200,6 @@ getEnvVars().then(
       );
       await copyFile(`${__dirname}/config/.babelrc`, `${directory}/.babelrc`);
       await writeFile(
-        `${directory}/${appNameNoSpaces}.html`,
-        generateHtml(appNameNoSpaces)
-      );
-      await writeFile(
         `${directory}/.gitignore`,
         generateGitIgnore({ buildFolder })
       );
@@ -267,6 +263,11 @@ getEnvVars().then(
         if (!response.body.includes("already exists")) throw err; // if app exists we'll use it
       }
 
+      await writeFile(
+        `${directory}/${appNameNoSpaces}.html`,
+        generateHtml({ appName: appNameNoSpaces, appUrl })
+      );
+
       const devDependencies = [
         "@highpoint/send-to-peoplesoft",
         "webpack",
@@ -278,7 +279,7 @@ getEnvVars().then(
         "@babel/preset-env",
         "@babel/preset-react"
       ];
-      const dependencies = ["react", "react-dom"];
+      const dependencies = ["react", "react-dom", "@highpoint/js-fetch"];
 
       const cwd = path.resolve(directory);
       await exec("yarn", [], { cwd });
