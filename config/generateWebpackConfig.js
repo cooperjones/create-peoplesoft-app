@@ -12,7 +12,9 @@ module.exports = ({ buildFolder, appName }) => {
       publicPath: "/"
     },
     devServer: {
-      historyApiFallback: { index: "${appName}.html" }
+      disableHostCheck: true,
+      contentBase: outputPath,
+      compress: true
     },
     optimization: {
       splitChunks: {

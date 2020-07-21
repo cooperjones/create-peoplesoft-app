@@ -11,7 +11,6 @@ const getToken = require("@highpoint/get-ps-token");
 const packageJson = require("./package.json");
 const openBrowser = require("react-dev-utils/openBrowser");
 const generateGitIgnore = require("./config/generateGitIgnore");
-const generateHtml = require("./config/generateHtml");
 const generateJson = require("./config/generatePackageJson");
 const generateWebpackConfig = require("./config/generateWebpackConfig");
 
@@ -185,7 +184,7 @@ getEnvVars().then(
       .replace(/\s/g, "_")
       .replace(/[^a-z]/gi, "")
       .toLowerCase();
-    const psAppHtmlName = appNameNoSpaces.toUpperCase();
+    const psAppNameNoSpaces = appNameNoSpaces.toUpperCase();
     try {
       await mkdir(directory);
       await mkdir(`${directory}/src`);
@@ -196,7 +195,7 @@ getEnvVars().then(
       );
       await copyFile(
         `${__dirname}/config/styles.css`,
-        `${directory}/${appNameNoSpaces}.css`
+        `${directory}/src/${appNameNoSpaces}.css`
       );
       await copyFile(`${__dirname}/config/.babelrc`, `${directory}/.babelrc`);
       await writeFile(
@@ -242,7 +241,7 @@ getEnvVars().then(
         pass: envVars.HTTP_PASSWORD
       };
 
-      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${psAppName}&weblibName=${weblibName}&htmlObjectName=${psAppHtmlName}`;
+      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${psAppName}&weblibName=${weblibName}&appJsName=${psAppNameNoSpaces}_APP_JS&vendorJsName=${psAppNameNoSpaces}_VENDOR_JS&appStyleName=${psAppNameNoSpaces}`;
 
       const options = {
         method: "POST",
@@ -254,7 +253,7 @@ getEnvVars().then(
       if (response.statusCode !== 200)
         throw new Error("Failed to create PeopleSoft app.");
       let appUrl = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/{weblibName}.ISCRIPT1.FieldFormula.IScript_Main`;
-      let localDevHeaderName = `X-${appNameNoSpaces}-Asset-Url`;
+      let localDevHeaderName = `X-${psAppNameNoSpaces}-Asset-Url`;
       try {
         const jsonResponse = JSON.parse(response.body);
         appUrl = jsonResponse.appUrl;
@@ -262,11 +261,6 @@ getEnvVars().then(
       } catch (err) {
         if (!response.body.includes("already exists")) throw err; // if app exists we'll use it
       }
-
-      await writeFile(
-        `${directory}/${appNameNoSpaces}.html`,
-        generateHtml({ appName: appNameNoSpaces, appUrl })
-      );
 
       const devDependencies = [
         "@highpoint/send-to-peoplesoft",
@@ -298,6 +292,17 @@ getEnvVars().then(
           "yarn deploy"
         )} to send your JS and CSS assets to your PeopleSoft server.\n`
       );
+      console.log(
+        `You can use ${chalk.green(
+          localDevHeaderName
+        )} request header in your app to load assets from a custom URL instead of the PeopleSoft server.`
+      );
+      console.log(
+        `This is useful for development. Read more about it here: ${chalk.blue(
+          "https://cooperjones.github.io/hpt-docs/?path=/docs/welcome-installation--page"
+        )}\n`
+      );
+
       console.log(`Your app is now live at ${chalk.blue(appUrl)}.\n`);
     } catch (err) {
       console.error("Something went wrong.");

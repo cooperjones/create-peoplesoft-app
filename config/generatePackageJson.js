@@ -11,10 +11,10 @@ module.exports = ({ buildFolder, hasHttpAuth, appName }) =>
           hasHttpAuth ? "--with-auth" : ""
         }`,
         clean: `mkdirp ${buildFolder} && rimraf ${buildFolder}/*`,
-        "copy-assets": `cp ${appName}.css ${appName}.html ${buildFolder}`,
-        prebuild: "yarn clean && yarn copy-assets",
+        "copy-css": `cp src/${appName}.css ${buildFolder}`,
+        prebuild: "yarn clean && yarn copy-css",
         build: "webpack --mode production",
-        prestart: "yarn clean",
+        prestart: "yarn prebuild",
         start: "webpack-dev-server --mode development"
       }
     },
