@@ -182,7 +182,7 @@ getEnvVars().then(
     const psAppName = appName;
     const appNameNoSpaces = directory
       .replace(/\s/g, "_")
-      .replace(/[^a-z]/gi, "")
+      .replace(/[^a-z_]/gi, "")
       .toLowerCase();
     const psAppNameNoSpaces = appNameNoSpaces.toUpperCase();
     try {
