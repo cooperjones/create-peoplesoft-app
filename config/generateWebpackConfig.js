@@ -12,6 +12,7 @@ module.exports = ({ buildFolder, appName }) => {
       publicPath: "/"
     },
     devServer: {
+      https: true,
       disableHostCheck: true,
       contentBase: outputPath,
       compress: true
