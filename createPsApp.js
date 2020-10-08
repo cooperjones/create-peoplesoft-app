@@ -241,7 +241,7 @@ getEnvVars().then(
         pass: envVars.HTTP_PASSWORD
       };
 
-      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${psAppName}&weblibName=${weblibName}&appJsName=${psAppNameNoSpaces}_APP_JS&vendorJsName=${psAppNameNoSpaces}_VENDOR_JS&appStyleName=${psAppNameNoSpaces}`;
+      const uri = `https://${envVars.PS_HOSTNAME}/psc/${envVars.PS_ENVIRONMENT}/EMPLOYEE/${envVars.PS_NODE}/s/WEBLIB_H_DEV.ISCRIPT1.FieldFormula.IScript_CreatePSApp?postDataBin=y&appName=${psAppNameNoSpaces}&weblibName=${weblibName}&appJsName=${psAppNameNoSpaces}_APP_JS&vendorJsName=${psAppNameNoSpaces}_VENDOR_JS&appStyleName=${psAppNameNoSpaces}`;
 
       const options = {
         method: "POST",
