@@ -271,7 +271,8 @@ getEnvVars().then(
         "@babel/cli",
         "babel-loader",
         "@babel/preset-env",
-        "@babel/preset-react"
+        "@babel/preset-react",
+        "@babel/preset-typescript"
       ];
       const dependencies = ["react", "react-dom", "@highpoint/js-fetch"];
 
@@ -298,7 +299,10 @@ getEnvVars().then(
         )} request header in your app to load assets from a custom URL instead of the PeopleSoft server.`
       );
       console.log(
-        `This is useful for development. Read more about it here: ${chalk.blue(
+        `Install the mod header browser extension for Chrome ${chalk.blue('https://chrome.google.com/webstore/detail/modheader/idgpnmonknjnojddfkpgkljpfnnfcklj?hl=en')}, Firefox ${chalk.blue('https://addons.mozilla.org/en-US/firefox/addon/modheader-firefox/')}, or browser of your choice`
+      );
+      console.log(
+        `This is useful for local development. Read more about it here: ${chalk.blue(
           "https://cooperjones.github.io/hpt-docs/?path=/docs/welcome-installation--page"
         )}\n`
       );
